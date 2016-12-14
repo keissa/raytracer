@@ -14,12 +14,26 @@ void writePPM(const char * imagepath, int width, int height, int*** img, int col
 int main()
 {
     int width = 256*2, height = 256*2;
-    double freq = 3;
+//    double freq = 3;
+    double freq = 300;
     double thickness = 0.2;
     double f = 256;
     double proj_x = 3;
-    double e_x = height, e_y = 80, e_z = height;
-    Vect eye_pos = Vect(height, 80, height);
+
+    Vect O (0,0,0);
+    Vect X (1,0,0);
+    Vect Y (0,1,0);
+    Vect Z (0,0,1);
+
+//    double e_x = height, e_y = 80, e_z = height;
+//    Vect eye_pos = Vect(height, 80, height);
+    Vect eye_pos = Vect(5, 2, 5);
+    Vect look_at = Vect(0, 0, 0);
+    // Camera three axes are cam_dir, cam_right, cam_down
+    Vect cam_dir = (look_at - eye_pos).normalize();
+    Vect cam_right = Y.crossProduct(cam_dir).normalize();
+    Vect cam_down = cam_dir.crossProduct(cam_right).normalize();
+    cam_down = cam_down*(-1);
 
     int p1_r = 128, p1_g = 0, p1_b = 0;
     int p2_r = 0, p2_g = 128, p2_b = 0;
@@ -31,19 +45,22 @@ int main()
     Vect projection_normal = Vect(n_x, n_y, n_z);
     //double pn3_x = cos(M_PI * angle / 180), pn3_y = 0, pn3_z = -sin(M_PI * angle / 180), p3_D = 35 * sin(M_PI * angle / 180);
     //double pn2_x = -cos(M_PI * angle / 180), pn2_y = 0, pn2_z = -sin(M_PI * angle / 180), p2_D = 35 * sin(M_PI * angle / 180);
-//    double pn3_x = 0, pn3_y = 0, pn3_z = 1, p3_D = 0;
-    Vect pn3 = Vect(0, 0, 1);
-    double p3_D = 0;
+
+//    double pn1_x = 0, pn1_y = 1, pn1_z = 0, p1_D = 0;
+        Vect pn1 = Vect(0, 1, 0);
+        double p1_D = 0;
 //    double pn2_x = 1, pn2_y = 0, pn2_z = 0,
     Vect pn2 = Vect(1, 0, 0);
     double p2_D = 0;
-//    double pn1_x = 0, pn1_y = 1, pn1_z = 0, p1_D = 0;
-    Vect pn1 = Vect(0, 1, 0);
-    double p1_D = 0;
+//    double pn3_x = 0, pn3_y = 0, pn3_z = 1, p3_D = 0;
+        Vect pn3 = Vect(0, 0, 1);
+        double p3_D = 0;
+
 
 //    double sc1_x = 30, sc1_y = 81, sc1_z = 30, s1_r = 50;
-    Vect sc1 = Vect(30, 81, 30);
-    double s1_r = 50;
+//    Vect sc1 = Vect(30, 81, 30);
+    Vect sc1 = Vect(4, 1, 3);
+    double s1_r = 0.3;
 
     int*** arr = new int**[width];
     for (int i = 0; i < width; i++)
@@ -56,13 +73,19 @@ int main()
         for (int j = 0; j < height; j++)
         {
 
-            double x = (((j - 0)*(f - proj_x - proj_x)) / (height - 1)) + proj_x;
-//            double y = height*0.5-i;
-            double y = (((i - 0)*(f - proj_x - proj_x)) / (height - 1)) + proj_x;
-            double z = -1*(x*n_x + y*n_y + D)/n_z;
+//            double x = (((j - 0)*(f - proj_x - proj_x)) / (height - 1)) + proj_x;
+////            double y = height*0.5-i;
+//            double y = (((i - 0)*(f - proj_x - proj_x)) / (height - 1)) + proj_x;
+//            double z = -1*(x*n_x + y*n_y + D)/n_z;
 
-            Vect ray_direction = Vect(x - e_x, y - e_y, z - e_z).normalize();
-
+//            Vect ray_direction = Vect(x - eye_pos.getVX(), y - eye_pos.getVY(), z - eye_pos.getVZ()).normalize();
+            double iamnt = (i + 0.5)/width;
+            double jamnt = ((height - j) + 0.5)/height;
+            Vect ray_direction = (cam_dir + cam_right*(jamnt-0.5) +
+                                  cam_down*(iamnt-0.5)).normalize();
+//            cout << (cam_down*(jamnt-0.5)).getVX() << " "
+//                 << (cam_down*(jamnt-0.5)).getVY() << " "
+//                 << (cam_down*(jamnt-0.5)).getVZ() << " " << endl;
             double object_ts[OBJS_NUM];
             double object_denoms[OBJS_NUM];
 
@@ -148,12 +171,21 @@ int main()
                     if( object_t_idx == 0 ){
                         intersect_1 = intersect.getVX();
                         intersect_2 = intersect.getVZ();
+//                        p_r = 255;
+//                        p_g = 0;
+//                        p_b = 0;
                     } else if( object_t_idx == 1 ){
                         intersect_1 = intersect.getVZ();
                         intersect_2 = intersect.getVY()/ height * f;
+//                        p_r = 0;
+//                        p_g = 255;
+//                        p_b = 0;
                     } else if( object_t_idx == 2 ){
                         intersect_1 = intersect.getVX();
                         intersect_2 = intersect.getVY()/ height * f;
+//                        p_r = 0;
+//                        p_g = 0;
+//                        p_b = 255;
                     }
                     // plane stripes
                     if( object_t_idx < 3 ){

@@ -63,6 +63,10 @@ class Vect {
         return Vect (x*scalar, y*scalar, z*scalar);
     }
 
+    Vect operator/(double scalar){
+        return Vect (x/scalar, y/scalar, z/scalar);
+    }
+
 };
 
 Vect::Vect () {
