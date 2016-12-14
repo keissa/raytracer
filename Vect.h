@@ -80,4 +80,11 @@ Vect::Vect (double i, double j, double k) {
     y = j;
     z = k;
 }
+
+struct two_doubles
+{
+	double t;
+	double denom;
+};
+
 #endif // Vect_H
