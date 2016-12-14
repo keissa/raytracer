@@ -5,7 +5,7 @@
 
 #include <Vect.h>
 
-#define OBJS_NUM 4
+#define OBJS_NUM 6
 
 using namespace std;
 
@@ -46,22 +46,22 @@ int main()
     //double pn3_x = cos(M_PI * angle / 180), pn3_y = 0, pn3_z = -sin(M_PI * angle / 180), p3_D = 35 * sin(M_PI * angle / 180);
     //double pn2_x = -cos(M_PI * angle / 180), pn2_y = 0, pn2_z = -sin(M_PI * angle / 180), p2_D = 35 * sin(M_PI * angle / 180);
 
-//    double pn1_x = 0, pn1_y = 1, pn1_z = 0, p1_D = 0;
-        Vect pn1 = Vect(0, 1, 0);
-        double p1_D = 0;
-//    double pn2_x = 1, pn2_y = 0, pn2_z = 0,
+    Vect pn1 = Vect(0, 1, 0);
+    double p1_D = 0;
     Vect pn2 = Vect(1, 0, 0);
     double p2_D = 0;
-//    double pn3_x = 0, pn3_y = 0, pn3_z = 1, p3_D = 0;
-        Vect pn3 = Vect(0, 0, 1);
-        double p3_D = 0;
+    Vect pn3 = Vect(0, 0, 1);
+    double p3_D = 0;
 
-
-//    double sc1_x = 30, sc1_y = 81, sc1_z = 30, s1_r = 50;
-//    Vect sc1 = Vect(30, 81, 30);
-    double s1_r = 0.3;
-    Vect sc1 = Vect(2.5, s1_r + 0.1, 2.5);
-
+    // Right Sphere
+    double s1_r = 0.4;
+    Vect sc1 = Vect(3.0, s1_r + 0.01, 1.5);
+    // Center Sphere
+    double s2_r = 0.4;
+    Vect sc2 = Vect(2.5, s2_r + 0.01, 2.5);
+    // Left Sphere
+    double s3_r = 0.4;
+    Vect sc3 = Vect(1.5, s3_r + 0.01, 3.0);
 
     int*** arr = new int**[width];
     for (int i = 0; i < width; i++)
@@ -144,6 +144,64 @@ int main()
             }
             object_ts[3] = t4;
 
+            // Center Sphere
+            C =  ((eye_pos-sc2).squaredMagnitude()) - s2_r*s2_r;
+            B = ray_direction.dotProduct( eye_pos-sc2 ) * 2;
+            A = ray_direction.squaredMagnitude();
+            D = B*B - 4 * A * C;
+            double t5, t5_1, t5_2;
+            if ( D < 0 ){
+                // No intersection
+                t5 = 1e7;
+            } else if ( abs(D) < 1e-5 ) {
+                // One intersection
+                t5 = (-1*B) / (2*A);
+            } else if ( D > 0 ) {
+                // Two intersections
+                t5_1 = (-1*B + sqrt(D)) / (2*A);
+                t5_2 = (-1*B - sqrt(D)) / (2*A);
+                if( t5_1 < t5_2 )
+                    t5 = t5_1;
+                else
+                    t5 = t5_2;
+            }
+            if( t5 > 0 && t5 < 1e7 ){
+                Vect s_intersect = eye_pos + ray_direction*t5;
+                Vect sn2 = (s_intersect - sc2).normalize();
+                double denom5= sn2.dotProduct(ray_direction);
+                object_denoms[4] = denom5;
+            }
+            object_ts[4] = t5;
+
+            // Left Sphere
+            C =  ((eye_pos-sc3).squaredMagnitude()) - s3_r*s3_r;
+            B = ray_direction.dotProduct( eye_pos-sc3 ) * 2;
+            A = ray_direction.squaredMagnitude();
+            D = B*B - 4 * A * C;
+            double t6, t6_1, t6_2;
+            if ( D < 0 ){
+                // No intersection
+                t6 = 1e7;
+            } else if ( abs(D) < 1e-5 ) {
+                // One intersection
+                t6 = (-1*B) / (2*A);
+            } else if ( D > 0 ) {
+                // Two intersections
+                t6_1 = (-1*B + sqrt(D)) / (2*A);
+                t6_2 = (-1*B - sqrt(D)) / (2*A);
+                if( t6_1 < t6_2 )
+                    t6 = t6_1;
+                else
+                    t6 = t6_2;
+            }
+            if( t6 > 0 && t6 < 1e7 ){
+                Vect s_intersect = eye_pos + ray_direction*t6;
+                Vect sn3 = (s_intersect - sc3).normalize();
+                double denom6= sn3.dotProduct(ray_direction);
+                object_denoms[5] = denom6;
+            }
+            object_ts[5] = t6;
+
             double denom = 0;
             double t = 0;
             int p_r, p_g, p_b;
@@ -203,11 +261,22 @@ int main()
                             p_b = 255;
                         }
                     } else if( object_t_idx == 3 ) {
-                        // cout << "aSd" << i << " " << j << endl;
+                        // Right Sphere
                         p_r = 255;
                         p_g = 0;
                         p_b = 0;
+                    } else if( object_t_idx == 4 ) {
+                        // Center Sphere
+                        p_r = 0;
+                        p_g = 255;
+                        p_b = 0;
+                    } else if( object_t_idx == 5 ) {
+                        // Left Sphere
+                        p_r = 0;
+                        p_g = 0;
+                        p_b = 255;
                     }
+
                     break;
                 }
             }
