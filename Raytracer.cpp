@@ -27,8 +27,8 @@ int main()
 
 //    double e_x = height, e_y = 80, e_z = height;
 //    Vect eye_pos = Vect(height, 80, height);
-    Vect eye_pos = Vect(5, 2, 5);
-    Vect look_at = Vect(0, 2, 0);
+    Vect eye_pos = Vect(5, 0.5, 5);
+    Vect look_at = Vect(0, 0.5, 0);
     // Camera three axes are cam_dir, cam_right, cam_down
     Vect cam_dir = (look_at - eye_pos).normalize();
     Vect cam_right = Y.crossProduct(cam_dir).normalize();
@@ -59,8 +59,9 @@ int main()
 
 //    double sc1_x = 30, sc1_y = 81, sc1_z = 30, s1_r = 50;
 //    Vect sc1 = Vect(30, 81, 30);
-    Vect sc1 = Vect(3.5, 1, 2.5);
     double s1_r = 0.3;
+    Vect sc1 = Vect(2.5, s1_r + 0.1, 2.5);
+
 
     int*** arr = new int**[width];
     for (int i = 0; i < width; i++)
