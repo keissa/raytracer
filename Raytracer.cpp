@@ -37,34 +37,54 @@ double max(double x, double y)
 	return x >= y ? x : y;
 }
 
+two_doubles max(double x, double y, double z)
+{
+	two_doubles td;
+	if (x >= y && x >= z)
+	{
+		td.denom = x;
+		if (y >= z)
+			td.t = y;
+		else
+			td.t = z;
+	}
+	if (y >= x && y >= z)
+	{
+		td.denom = y;
+		if (x >= z)
+			td.t = x;
+		else
+			td.t = z;
+	}
+	if (z >= y && z >= x)
+	{
+		td.denom = z;
+		if (y >= x)
+			td.t = y;
+		else
+			td.t = x;
+	}
+	return td;
+}
+
 int main()
 {
 	int p1_r = 128, p1_g = 0, p1_b = 0;
 	int p2_r = 0, p2_g = 128, p2_b = 0;
 	int p3_r = 0, p3_g = 0, p3_b = 128;
 	int kd = 5, ka = 1;
-	int ks = 500;
+	int ks = 100;
 	double gamma = 8;
-	// plane normal -- normalized
-	Vect pn1 = Vect(0, 1, 0);
-	double p1_D = 0;
-	Vect pn2 = Vect(1, 0, 0);
-	double p2_D = 0;
-	Vect pn3 = Vect(0, 0, 1);
-	double p3_D = 0;
+	// plane normals -- normalized
+	Vect pn[] = { Vect(0,1,0), Vect(1,0,0), Vect(0,0,1) };
+	double p_D[] = { 0, 0, 0 };
 
-	// Right Sphere
-	double s1_r = 0.4;
-	Vect sc1 = Vect(3.0, s1_r + 0.01, 1.5);
-	// Center Sphere
-	double s2_r = 0.4;
-	Vect sc2 = Vect(2.5, s2_r + 0.01, 2.5);
-	// Left Sphere
-	double s3_r = 0.4;
-	Vect sc3 = Vect(1.5, s3_r + 0.01, 3.0);
+	// Spheres
+	double s_r[] = { 0.4, 0.4, 0.4 };
+	Vect sc[] = { Vect(3.0, s_r[0] + 0.01, 1.5), Vect(2.5, s_r[1] + 0.01, 2.5), Vect(1.5, s_r[2] + 0.01, 3.0) };
 
 	// Lights
-	Vect light1_pos = Vect(3, s2_r + 1, 3);
+	Vect light1_pos = Vect(3, s_r[1] + 1, 3);
 
 	Vect normal;
 
@@ -86,29 +106,20 @@ int main()
 			double object_denoms[OBJS_NUM];
 			two_doubles t_d;
 			// planes intersection
-			intersect_plane(eye_pos, ray_direction, pn1, p1_D, t_d);
-			object_ts[0] = t_d.t;
-			object_denoms[0] = t_d.denom;
-			intersect_plane(eye_pos, ray_direction, pn2, p2_D, t_d);
-			object_ts[1] = t_d.t;
-			object_denoms[1] = t_d.denom;
-			intersect_plane(eye_pos, ray_direction, pn3, p3_D, t_d);
-			object_ts[2] = t_d.t;
-			object_denoms[2] = t_d.denom;
+			for (int pl = 0; pl < 3; pl++)
+			{
+				intersect_plane(eye_pos, ray_direction, pn[pl], p_D[pl], t_d);
+				object_ts[pl] = t_d.t;
+				object_denoms[pl] = t_d.denom;
+			}
 
-			// Sphere intersection
-			// Right Sphere
-			intersect_sphere(eye_pos, ray_direction, sc1, s1_r, t_d);
-			object_denoms[3] = t_d.denom;
-			object_ts[3] = t_d.t;
-			// Center Sphere
-			intersect_sphere(eye_pos, ray_direction, sc2, s2_r, t_d);
-			object_denoms[4] = t_d.denom;
-			object_ts[4] = t_d.t;
-			// Left Sphere
-			intersect_sphere(eye_pos, ray_direction, sc3, s3_r, t_d);
-			object_denoms[5] = t_d.denom;
-			object_ts[5] = t_d.t;
+			// Sphere intersections
+			for (int sp = 0; sp < 3; sp++)
+			{
+				intersect_sphere(eye_pos, ray_direction, sc[sp], s_r[sp], t_d);
+				object_denoms[sp + 3] = t_d.denom;
+				object_ts[sp + 3] = t_d.t;
+			}
 
 			double denom = 0;
 			double t = 0;
@@ -133,66 +144,25 @@ int main()
 					intersected_any = true;
 					denom = object_denoms[object_t_idx];
 					t = object_ts[object_t_idx];
-					if (object_t_idx == 0)
-						normal = pn1;
-					else if (object_t_idx == 1)
-						normal = pn2;
-					else if (object_t_idx == 2)
-						normal = pn3;
-					else if (object_t_idx == 3)
-						normal = (eye_pos + ray_direction*t - sc1).normalize();
-					else if (object_t_idx == 4)
-						normal = (eye_pos + ray_direction*t - sc2).normalize();
-					else if (object_t_idx == 5)
-						normal = (eye_pos + ray_direction*t - sc3).normalize();
+					if (object_t_idx < 3)
+						normal = pn[object_t_idx];
+					else
+						normal = (eye_pos + ray_direction*t - sc[object_t_idx-3]).normalize();
 					Vect intersect = eye_pos + ray_direction*t;
 					double intersect_1, intersect_2;
-					if (object_t_idx == 0) {
-						intersect_1 = intersect.getVX();
-						intersect_2 = intersect.getVZ();
+					t_d = max(intersect.getVX(), intersect.getVY() / height * f * 2, intersect.getVZ());
+					intersect_1 = t_d.denom;
+					intersect_2 = t_d.t;
+					if (object_t_idx < 3)
+						// plane stripes
+						p_r = p_g = p_b = 255 * (abs(cos(freq / f*intersect_1 * 2 * M_PI)) > thickness 
+							&& abs(cos(freq / f*intersect_2 * 2 * M_PI)) > thickness);
+					else {
+						// spheres
+						p_r = 255 * (object_t_idx == 3);
+						p_g = 255 * (object_t_idx == 4);
+						p_b = 255 * (object_t_idx == 5);
 					}
-					else if (object_t_idx == 1) {
-						intersect_1 = intersect.getVZ();
-						intersect_2 = intersect.getVY() / height * f * 2;
-					}
-					else if (object_t_idx == 2) {
-						intersect_1 = intersect.getVX();
-						intersect_2 = intersect.getVY() / height * f * 2;
-					}
-					// plane stripes
-					if (object_t_idx < 3) {
-						if (abs(cos(freq / f*intersect_1 * 2 * M_PI)) < thickness || abs(cos(freq / f*intersect_2 * 2 * M_PI)) < thickness)
-						{
-							p_r = 0;
-							p_g = 0;
-							p_b = 0;
-						}
-						else
-						{
-							p_r = 255;
-							p_g = 255;
-							p_b = 255;
-						}
-					}
-					else if (object_t_idx == 3) {
-						// Right Sphere
-						p_r = 255;
-						p_g = 0;
-						p_b = 0;
-					}
-					else if (object_t_idx == 4) {
-						// Center Sphere
-						p_r = 0;
-						p_g = 255;
-						p_b = 0;
-					}
-					else if (object_t_idx == 5) {
-						// Left Sphere
-						p_r = 0;
-						p_g = 0;
-						p_b = 255;
-					}
-
 					break;
 				}
 			}
@@ -205,19 +175,17 @@ int main()
 			double intersect_dist = intersect2light.magnitude();
 			intersect2light = intersect2light.normalize();
 			bool shade = false;
-			if (intersect_plane(intersect, intersect2light, pn1, p1_D, t_d) && t_d.t < intersect_dist)
-				shade = true;
-			else if (intersect_plane(intersect, intersect2light, pn2, p2_D, t_d) && t_d.t < intersect_dist)
-				shade = true;
-			else if (intersect_plane(intersect, intersect2light, pn3, p3_D, t_d) && t_d.t < intersect_dist)
-				shade = true;
-			else if (intersect_sphere(intersect, intersect2light, sc1, s1_r, t_d) && t_d.t < intersect_dist)
-				shade = true;
-			else if (intersect_sphere(intersect, intersect2light, sc2, s3_r, t_d) && t_d.t < intersect_dist)
-				shade = true;
-			else if (intersect_sphere(intersect, intersect2light, sc3, s3_r, t_d) && t_d.t < intersect_dist)
-				shade = true;
-			Vect halfway = (ray_direction*(-1) + intersect2light)*0.5;
+			for(int pl=0; pl<3; pl++)
+				if (!shade && intersect_plane(intersect, intersect2light, pn[pl], p_D[pl], t_d) && t_d.t < intersect_dist)
+				{
+					shade = true;
+				}
+			for (int sp = 0; sp<3; sp++)
+				if (!shade && intersect_sphere(intersect, intersect2light, sc[sp], s_r[sp], t_d) && t_d.t < intersect_dist)
+				{
+					shade = true;
+				}
+			Vect halfway = (ray_direction*(-1) + intersect2light).normalize();
 			double specular = halfway.dotProduct(normal);
 			if (shade)
 			{
