@@ -73,7 +73,7 @@ int main()
 	int p2_r = 0, p2_g = 128, p2_b = 0;
 	int p3_r = 0, p3_g = 0, p3_b = 128;
 	int kd = 5, ka = 1;
-	int ks = 100;
+    int ks = 200;
 	double gamma = 8;
 	// plane normals -- normalized
 	Vect pn[] = { Vect(0,1,0), Vect(1,0,0), Vect(0,0,1) };
@@ -126,6 +126,7 @@ int main()
 			int p_r, p_g, p_b;
 
 			bool intersected_any = false;
+            // Check shortest primary intersection
 			for (int object_t_idx = 0; object_t_idx < OBJS_NUM; object_t_idx++) {
 				bool intersected = true;
 				double object_t = object_ts[object_t_idx];
@@ -170,6 +171,7 @@ int main()
 			if (!intersected_any) {
 				continue;
 			}
+            // Check for shadows
 			Vect intersect = eye_pos + ray_direction*t;
 			Vect intersect2light = light1_pos - intersect;
 			double intersect_dist = intersect2light.magnitude();
@@ -177,40 +179,139 @@ int main()
 			bool shade = false;
 			for(int pl=0; pl<3; pl++)
 				if (!shade && intersect_plane(intersect, intersect2light, pn[pl], p_D[pl], t_d) && t_d.t < intersect_dist)
-				{
 					shade = true;
-				}
 			for (int sp = 0; sp<3; sp++)
 				if (!shade && intersect_sphere(intersect, intersect2light, sc[sp], s_r[sp], t_d) && t_d.t < intersect_dist)
-				{
 					shade = true;
-				}
 			Vect halfway = (ray_direction*(-1) + intersect2light).normalize();
 			double specular = halfway.dotProduct(normal);
+
+            // Check for first secondary reflection
+            // has equation: ray2 = intersect_point + t*ray2_direction
+
+            Vect sec_ref1_direction = ray_direction - normal * (ray_direction.dotProduct(normal)) * 2; // direction of reflected
+            sec_ref1_direction = sec_ref1_direction.normalize();
+            Vect second_normal;
+            double ref1_t;
+            double ref1_a = ka, ref1_dr = 0, ref1_dg = 0, ref1_db = 0, ref1_s = 0, ref1_coeff = 0.5;
+
+            // planes intersection
+            intersect_plane(intersect, sec_ref1_direction, pn[0], p_D[0], t_d);
+            object_ts[0] = t_d.t;
+            object_denoms[0] = t_d.denom;
+            intersect_plane(intersect, sec_ref1_direction, pn[1], p_D[1], t_d);
+            object_ts[1] = t_d.t;
+            object_denoms[1] = t_d.denom;
+            intersect_plane(intersect, sec_ref1_direction, pn[2], p_D[2], t_d);
+            object_ts[2] = t_d.t;
+            object_denoms[2] = t_d.denom;
+
+            // Sphere intersection
+            // Right Sphere
+            intersect_sphere(intersect, sec_ref1_direction, sc[0], s_r[0], t_d);
+            object_denoms[3] = t_d.denom;
+            object_ts[3] = t_d.t;
+            // Center Sphere
+            intersect_sphere(intersect, sec_ref1_direction, sc[1], s_r[1], t_d);
+            object_denoms[4] = t_d.denom;
+            object_ts[4] = t_d.t;
+            // Left Sphere
+            intersect_sphere(intersect, sec_ref1_direction, sc[2], s_r[2], t_d);
+            object_denoms[5] = t_d.denom;
+            object_ts[5] = t_d.t;
+
+//            double denom = 0;
+//            double t = 0;
+            int p_r_2, p_g_2, p_b_2;
+
+            intersected_any = false;
+
+            for (int object_t_idx = 0; object_t_idx < OBJS_NUM; object_t_idx++) {
+                bool intersected = true;
+                double object_t = object_ts[object_t_idx];
+                if (object_t < 0 || object_t >= 1e7) {
+                    intersected = false;
+                    continue;
+                }
+                for (int other_object_t_idx = 0; other_object_t_idx < OBJS_NUM; other_object_t_idx++) {
+                    double other_object_t = object_ts[other_object_t_idx];
+                    if (other_object_t > 0 && other_object_t < 1e7 && other_object_t < object_t) {
+                        intersected = false;
+                        break;
+                    }
+                }
+                if (intersected) {
+                    intersected_any = true;
+                    denom = object_denoms[object_t_idx];
+                    t = object_ts[object_t_idx];
+                    Vect ref1_intersect = intersect + sec_ref1_direction*t;
+                    Vect ref1_intersect2light = light1_pos - ref1_intersect;
+                    double ref1_intersect_dist = ref1_intersect2light.magnitude();
+                    ref1_intersect2light = ref1_intersect2light.normalize();
+					if (object_t_idx < 3)
+						second_normal = pn[object_t_idx];
+					else
+						second_normal = (ref1_intersect - sc[object_t_idx]).normalize();
+					double intersect_1, intersect_2;
+					t_d = max(ref1_intersect.getVX(), ref1_intersect.getVY() / height * f * 2, ref1_intersect.getVZ());
+					intersect_1 = t_d.denom;
+					intersect_2 = t_d.t;
+					if (object_t_idx < 3)
+						// plane stripes
+						p_r_2 = p_g_2 = p_b_2 = 255 * (abs(cos(freq / f*intersect_1 * 2 * M_PI)) > thickness
+							&& abs(cos(freq / f*intersect_2 * 2 * M_PI)) > thickness);
+					else {
+						// spheres
+						p_r_2 = 255 * (object_t_idx == 3);
+						p_g_2 = 255 * (object_t_idx == 4);
+						p_b_2 = 255 * (object_t_idx == 5);
+					}
+                    ref1_dr = kd*max(0.05, second_normal.dotProduct(ref1_intersect2light))*p_r_2 / 10 / ref1_intersect_dist;
+
+                    ref1_dg = kd*max(0.05, second_normal.dotProduct(ref1_intersect2light))*p_g_2 / 10 / ref1_intersect_dist;
+
+                    ref1_db = kd*max(0.05, second_normal.dotProduct(ref1_intersect2light))*p_b_2 / 10 / ref1_intersect_dist;
+                    Vect halfway2 = (sec_ref1_direction*(-1) + ref1_intersect2light).normalize();
+                    double specular2 = halfway2.dotProduct(second_normal);
+                    ref1_s = ks*pow(specular2, gamma);
+                    break;
+                }
+
+                if (!intersected_any) {
+                    ref1_coeff = 0;
+                }
+            }
+
 			if (shade)
 			{
 				//cout << "shade\n";
 				arr[i][j][0] = ka 
 					+ kd*max(0.05, normal.dotProduct(intersect2light))*p_r / 10 / intersect_dist
-					+ ks*pow(specular, gamma);
+                    + ks*pow(specular, gamma)
+                    + ref1_coeff*(ref1_a + ref1_dr + ref1_s);
 				arr[i][j][1] = ka 
 					+ kd*max(0.05, normal.dotProduct(intersect2light))*p_g / 10 / intersect_dist
-					+ ks*pow(specular, gamma);
+                    + ks*pow(specular, gamma)
+                    + ref1_coeff*(ref1_a + ref1_dg + ref1_s);
 				arr[i][j][2] = ka 
 					+ kd*max(0.05, normal.dotProduct(intersect2light))*p_b / 10 / intersect_dist
-					+ ks*pow(specular, gamma);
+                    + ks*pow(specular, gamma)
+                    + ref1_coeff*(ref1_a + ref1_db + ref1_s);
 			}
 			else
 			{
 				arr[i][j][0] = ka
 					+ kd*max(0.05, normal.dotProduct(intersect2light))*p_r / intersect_dist / intersect_dist
-					+ ks*pow(specular, gamma);
+                    + ks*pow(specular, gamma)
+                    + ref1_coeff*(ref1_a + ref1_dr + ref1_s);
 				arr[i][j][1] = ka 
 					+ kd*max(0.05, normal.dotProduct(intersect2light))*p_g / intersect_dist / intersect_dist
-					+ ks*pow(specular, gamma);
+                    + ks*pow(specular, gamma)
+                    + ref1_coeff*(ref1_a + ref1_dg + ref1_s);
 				arr[i][j][2] = ka 
 					+ kd*max(0.05, normal.dotProduct(intersect2light))*p_b / intersect_dist / intersect_dist
-					+ ks*pow(specular, gamma);
+                    + ks*pow(specular, gamma)
+                    + ref1_coeff*(ref1_a + ref1_db + ref1_s);
 			}
 			// clip values
 			arr[i][j][0] = arr[i][j][0] > 255 ? 255 : arr[i][j][0];
