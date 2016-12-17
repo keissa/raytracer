@@ -87,9 +87,4 @@ struct two_doubles
 	double denom;
 };
 
-struct three_doubles
-{
-    double r, g, b;
-};
-
 #endif // Vect_H

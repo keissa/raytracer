@@ -24,7 +24,7 @@ double thickness = 0.2;
 double f = 256;
 double proj_x = 3;
 
-int global_depth = 4;
+int global_depth = 3;
 double epsilone = 0.01;
 
 Vect O(0, 0, 0);
@@ -46,8 +46,8 @@ int kd = 2, ka = 1;
 int ks = 100;
 double spec_gamma = 8;
 
-float kref[] = {0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
-float ktrans[] = {0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
+float kref[] = {1.0, 1.0, 1.0, 0.0, 0.0, 0.0};
+float ktrans[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 float glass_refraction_index = 1.6, air_refraction_index = 1.0;
 
 // plane normals -- normalized
