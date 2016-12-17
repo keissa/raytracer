@@ -24,7 +24,7 @@ double thickness = 0.2;
 double f = 256;
 double proj_x = 3;
 
-int global_depth = 4;
+int global_depth = 3;
 double epsilone = 0.01;
 
 Vect O(0, 0, 0);
@@ -424,8 +424,10 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
 	reflected_color.r = 0;
     reflected_color.g = 0;
     reflected_color.b = 0;
+
+    float R = 1.0;
     
-	if(kref[min_ind] > 0)
+	if(kref[min_ind] > 0 || ktrans[min_ind] > 0)
 	{
         Vect ref_ray_direction = ray_direction - normal * (ray_direction.dotProduct(normal)) * 2;
         ref_ray_direction = ref_ray_direction.normalize();
@@ -449,12 +451,12 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
             Vect t1_ray_direction = (ray_direction - normal * temp1) * air_refraction_index / glass_refraction_index;
             t1_ray_direction = t1_ray_direction - normal * sqrt(t1_b);
             t1_ray_direction.normalize();
-            
+            R = (glass_refraction_index - 1) / (glass_refraction_index + 1);
+            R *= R;
             bool existed  = intersect_sphere_from_inside(intersect, t1_ray_direction, sc[min_ind-3], s_r[min_ind-3], t_d);
             //cout<<t_d.t<<endl;
             Vect intersect_out = intersect + t1_ray_direction * t_d.t;
             Vect normal_out = (intersect_out - sc[min_ind-3]).normalize() * -1;
-            
             float temp2 = t1_ray_direction.dotProduct(normal_out);
             float t2_b = 1 - (glass_refraction_index * glass_refraction_index * (1 - temp2 * temp2) / (air_refraction_index * air_refraction_index));
             if(t2_b >= 0)
@@ -474,19 +476,19 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
 			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.r / 10 / intersect_dist
             + ks*pow(specular, spec_gamma)
             + kref[min_ind] * reflected_color.r
-            + ktrans[min_ind] * refracted_color.r;
+            + ktrans[min_ind] * ((1 - R) *refracted_color.r + R * reflected_color.r);
             
 		color.g = ka 
 			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.g / 10 / intersect_dist
             + ks*pow(specular, spec_gamma)
             + kref[min_ind] * reflected_color.g
-            + ktrans[min_ind] * refracted_color.g;
+            + ktrans[min_ind] * ((1 - R) *refracted_color.g + R * reflected_color.g);
             
 		color.b = ka 
 			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.b / 10 / intersect_dist
             + ks*pow(specular, spec_gamma)
             + kref[min_ind] * reflected_color.b
-            + ktrans[min_ind] * refracted_color.b;
+            + ktrans[min_ind] * ((1 - R) *refracted_color.b + R * reflected_color.b);
 	}
 	else
 	{
@@ -494,19 +496,19 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
 			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.r / intersect_dist / intersect_dist
             + ks*pow(specular, spec_gamma)
             + kref[min_ind] * reflected_color.r
-            + ktrans[min_ind] * refracted_color.r;
+            + ktrans[min_ind] * ((1 - R) *refracted_color.r + R * reflected_color.r);
             
 		color.g = ka 
 			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.g / intersect_dist / intersect_dist
             + ks*pow(specular, spec_gamma)
             + kref[min_ind] * reflected_color.g
-            + ktrans[min_ind] * refracted_color.g;
+            + ktrans[min_ind] * ((1 - R) *refracted_color.g + R * reflected_color.g);
             
 		color.b = ka 
 			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.b / intersect_dist / intersect_dist
             + ks*pow(specular, spec_gamma)
             + kref[min_ind] * reflected_color.b
-            + ktrans[min_ind] * refracted_color.b;
+            + ktrans[min_ind] * ((1 - R) *refracted_color.b + R * reflected_color.b);
 	}
 
     //color clipping    
