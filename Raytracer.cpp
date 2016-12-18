@@ -15,7 +15,8 @@ bool intersect_plane(Vect pos, Vect ray_direction, Vect plane_normal, double D, 
 bool intersect_sphere(Vect pos, Vect ray_direction, Vect center, double radius, two_doubles& td);
 bool intersect_sphere_from_inside(Vect pos, Vect ray_direction, Vect center, double radius, two_doubles& td);
 
-bool is_shadow(Vect start_p, Vect ray_direction, double intersect_dist);
+bool is_shadow(Vect start_p, Vect ray_direction, double intersect_dist, int src_obj_idx);
+
 three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth);
 
 int width = 256 * 2, height = 256 * 2;
@@ -24,7 +25,7 @@ double thickness = 0.2;
 double f = 256;
 double proj_x = 3;
 
-int global_depth = 3;
+int global_depth = 2;
 double epsilone = 0.01;
 
 Vect O(0, 0, 0);
@@ -33,7 +34,7 @@ Vect Y(0, 1, 0);
 Vect Z(0, 0, 1);
 
 Vect eye_pos = Vect(5+3-3.25, 3+0.5-2.5, 5+3-3.25);
-Vect look_at = Vect(0, 0.5, 0);
+Vect look_at = Vect(0, 1, 0);
 // Camera three axes are cam_dir, cam_right, cam_down
 Vect cam_dir = (look_at - eye_pos).normalize();
 Vect cam_right = Y.crossProduct(cam_dir).normalize();
@@ -42,8 +43,8 @@ Vect cam_down = (cam_dir.crossProduct(cam_right).normalize())*(-1);
 int p1_r = 128, p1_g = 0, p1_b = 0;
 int p2_r = 0, p2_g = 128, p2_b = 0;
 int p3_r = 0, p3_g = 0, p3_b = 128;
-int kd=10, ka=10;
-int ks[] = {0,0,0,0,220,220};
+int kd=3, ka=10;
+int ks[] = {0,0,0,0,110,110};
 double spec_gamma = 8;
 
 float kref[] = {0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
@@ -61,7 +62,8 @@ double s_r[] = { 0.4, 0.4, 0.4 };
 Vect sc[] = { Vect(3.0, s_r[0] + 0.01, 1.5), Vect(2.5, s_r[1] + 0.01, 2.5), Vect(1.5, s_r[2] + 0.01, 3.0) };
 
 // Lights
-Vect light1_pos = Vect(3, s_r[1] + 1.5, 3);
+Vect light1_pos = Vect(3.5, s_r[1] + 3, 1.5); //Vect(3.5, s_r[1] + 3, 1.5)
+Vect light2_pos = Vect(0.5, 0.5, 1.5); //Vect(0.5, 0.5, 1.5);
 
 double max(double x, double y)
 {
@@ -216,19 +218,26 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
 			&& abs(cos(freq / f * intersect_2 * 2 * M_PI)) > thickness);
 	else {
 		// spheres
-		color.r = 255 * (min_ind == 3);
-		color.g = 0; //* (min_ind == 4);
-		color.b =  0 * (min_ind == 5);
+        color.r = (min_ind == 3) ? 255: 0;
+        color.g = (min_ind == 3) ? 255: 0; //* (min_ind == 4);
+        color.b =  255 * (min_ind == 3);
 		//color.r = color.g = color.b = 255;
 	}
 
-	Vect intersect2light = light1_pos - intersect;
-	double intersect_dist = intersect2light.magnitude();
-	intersect2light = intersect2light.normalize();
-	bool shadow = is_shadow(intersect, intersect2light, intersect_dist);
+    Vect intersect2light1 = light1_pos - intersect;
+    double intersect_dist1 = intersect2light1.magnitude();
+    intersect2light1 = intersect2light1.normalize();
+    Vect intersect2light2 = light2_pos - intersect;
+    double intersect_dist2 = intersect2light2.magnitude();
+    intersect2light2 = intersect2light2.normalize();
 
-	Vect halfway = (ray_direction*(-1) + intersect2light).normalize();
-	double specular = halfway.dotProduct(normal);
+    bool shadow1 = is_shadow(intersect, intersect2light1, intersect_dist1, min_ind);
+    bool shadow2 = is_shadow(intersect, intersect2light2, intersect_dist2, min_ind);
+
+    Vect halfway1 = (ray_direction*(-1) + intersect2light1).normalize();
+    double specular1 = halfway1.dotProduct(normal);
+    Vect halfway2 = (ray_direction*(-1) + intersect2light2).normalize();
+    double specular2 = halfway2.dotProduct(normal);
 	
 	three_doubles reflected_color;
 	reflected_color.r = 0;
@@ -278,48 +287,36 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
             }
         }
     }
+    double shadow1_atten = 1;
+    double shadow2_atten = 1;
+    if (shadow1)
+        shadow1_atten = 5;
+    if (shadow2)
+        shadow2_atten = 5;
 
-	if (shadow)
-	{
-		//cout << "shade\n";
-		color.r = ka 
-			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.r / 10 / intersect_dist
-            + ks[min_ind]*pow(specular, spec_gamma)
-            + kref[min_ind] * reflected_color.r
-            + ktrans[min_ind] * ((1 - R) *refracted_color.r + R * reflected_color.r);
-            
-		color.g = ka 
-			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.g / 10 / intersect_dist
-            + ks[min_ind]*pow(specular, spec_gamma)
-            + kref[min_ind] * reflected_color.g
-            + ktrans[min_ind] * ((1 - R) *refracted_color.g + R * reflected_color.g);
-            
-		color.b = ka 
-			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.b / 10 / intersect_dist
-            + ks[min_ind]*pow(specular, spec_gamma)
-            + kref[min_ind] * reflected_color.b
-            + ktrans[min_ind] * ((1 - R) *refracted_color.b + R * reflected_color.b);
-	}
-	else
-	{
-		color.r = ka
-			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.r / intersect_dist / intersect_dist
-            + ks[min_ind]*pow(specular, spec_gamma)
-            + kref[min_ind] * reflected_color.r
-            + ktrans[min_ind] * ((1 - R) *refracted_color.r + R * reflected_color.r);
-            
-		color.g = ka 
-			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.g / intersect_dist / intersect_dist
-            + ks[min_ind]*pow(specular, spec_gamma)
-            + kref[min_ind] * reflected_color.g
-            + ktrans[min_ind] * ((1 - R) *refracted_color.g + R * reflected_color.g);
-            
-		color.b = ka 
-			+ kd*max(0.05, normal.dotProduct(intersect2light))*color.b / intersect_dist / intersect_dist
-            + ks[min_ind]*pow(specular, spec_gamma)
-            + kref[min_ind] * reflected_color.b
-            + ktrans[min_ind] * ((1 - R) *refracted_color.b + R * reflected_color.b);
-	}
+    color.r = ka
+        + kd*max(0.05, normal.dotProduct(intersect2light1))*color.r / intersect_dist1/ intersect_dist1/ shadow1_atten
+        + ks[min_ind]*pow(specular1, spec_gamma)
+        + kd*max(0.05, normal.dotProduct(intersect2light2))*color.r / intersect_dist2/ intersect_dist2/ shadow2_atten
+        + ks[min_ind]*pow(specular2, spec_gamma)
+        + kref[min_ind] * reflected_color.r
+        + ktrans[min_ind] * ((1 - R) *refracted_color.r + R * reflected_color.r);
+
+    color.g = ka
+        + kd*max(0.05, normal.dotProduct(intersect2light1))*color.g / intersect_dist1 / intersect_dist1/ shadow1_atten
+        + ks[min_ind]*pow(specular1, spec_gamma)
+        + kd*max(0.05, normal.dotProduct(intersect2light2))*color.g / intersect_dist2/ intersect_dist2/ shadow2_atten
+        + ks[min_ind]*pow(specular2, spec_gamma)
+        + kref[min_ind] * reflected_color.g
+        + ktrans[min_ind] * ((1 - R) *refracted_color.g + R * reflected_color.g);
+
+    color.b = ka
+        + kd*max(0.05, normal.dotProduct(intersect2light1))*color.b / intersect_dist1 / intersect_dist1/ shadow1_atten
+        + ks[min_ind]*pow(specular1, spec_gamma)
+        + kd*max(0.05, normal.dotProduct(intersect2light2))*color.b / intersect_dist2/ intersect_dist2/ shadow2_atten
+        + ks[min_ind]*pow(specular2, spec_gamma)
+        + kref[min_ind] * reflected_color.b
+        + ktrans[min_ind] * ((1 - R) *refracted_color.b + R * reflected_color.b);
 
     //color clipping    
     color.r = color.r < 0? 0: color.r;
@@ -333,17 +330,17 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
     return color;
 }
 
-bool is_shadow(Vect start_p, Vect ray_direction, double intersect_dist)
+bool is_shadow(Vect start_p, Vect ray_direction, double intersect_dist, int src_obj_idx)
 {
 	two_doubles t_d;
 	bool shade = false;
 	for(int pl=0; pl<3; pl++)
-		if (!shade && intersect_plane(start_p, ray_direction, pn[pl], p_D[pl], t_d) && t_d.t < intersect_dist)
+        if (!shade && intersect_plane(start_p, ray_direction, pn[pl], p_D[pl], t_d) && (src_obj_idx != pl) && t_d.t < intersect_dist)
 			shade = true;
 	for (int sp = 0; sp<3; sp++)
-		if (!shade && intersect_sphere(start_p, ray_direction, sc[sp], s_r[sp], t_d) && t_d.t < intersect_dist)
+        if (!shade && intersect_sphere(start_p, ray_direction, sc[sp], s_r[sp], t_d) && (src_obj_idx - 3 != sp) && t_d.t < intersect_dist)
 			shade = true;
-	return shade;
+    return shade;
 }
 
 void writePPM(const char * imagepath, int width, int height, int*** img, int color)
