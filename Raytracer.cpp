@@ -24,7 +24,7 @@ double thickness = 0.2;
 double f = 256;
 double proj_x = 3;
 
-int global_depth = 1;
+int global_depth = 3;
 double epsilone = 0.01;
 
 Vect O(0, 0, 0);
@@ -198,10 +198,7 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
                 double dist_diff = abs(object_ts[min_ind] - object_ts[gouraud_i]);
                 if( dist_diff < 1 ){
                     normal = (pn[min_ind] + pn[gouraud_i]*(1 - 1*dist_diff)).normalize();
-//                    normal = (pn[min_ind] + pn[gouraud_i]).normalize();
                     denom = normal.dotProduct(ray_direction);
-//                    color.b =
-
                 }
             }
         }
