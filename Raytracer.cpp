@@ -24,7 +24,7 @@ double thickness = 0.2;
 double f = 256;
 double proj_x = 3;
 
-int global_depth = 2;
+int global_depth = 1;
 double epsilone = 0.01;
 
 Vect O(0, 0, 0);
@@ -107,14 +107,17 @@ int main()
 	{
 		arr[i] = new int*[height];
 		for (int j = 0; j < height; j++)
-			arr[i][j] = new int[3]();
+            arr[i][j] = new int[3]();
 	}
 	for (int i = 0; i < width; i++)
 		for (int j = 0; j < height; j++)
 		{
-			int index = 0;
-			for(int horizontal = -1; horizontal <= 1; horizontal++)
-			    for(int vertical = -1; vertical <= 1; vertical++)
+            arr[i][j][0] = 0;
+            arr[i][j][1] = 0;
+            arr[i][j][2] = 0;
+            int index = 0;
+            for(int horizontal = -1; horizontal <= 1; horizontal++)
+                for(int vertical = -1; vertical <= 1; vertical++)
 			    {
 			        double x = i + horizontal * 0.45;
 			        double y = j + vertical * 0.45;
@@ -187,8 +190,22 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
 	
 	denom = object_denoms[min_ind];
 	//t = object_ts[min_ind];
-	if (min_ind < 3)
+    if (min_ind < 3) {
 		normal = pn[min_ind];
+        // Gouraud normals modification
+        for(int gouraud_i = 0; gouraud_i < 3; gouraud_i++){
+            if( gouraud_i != min_ind ){
+                double dist_diff = abs(object_ts[min_ind] - object_ts[gouraud_i]);
+                if( dist_diff < 1 ){
+                    normal = (pn[min_ind] + pn[gouraud_i]*(1 - 1*dist_diff)).normalize();
+//                    normal = (pn[min_ind] + pn[gouraud_i]).normalize();
+                    denom = normal.dotProduct(ray_direction);
+//                    color.b =
+
+                }
+            }
+        }
+    }
 	else
 		normal = (start_p + ray_direction * min_t - sc[min_ind-3]).normalize();
 	Vect intersect = start_p + ray_direction * min_t;
