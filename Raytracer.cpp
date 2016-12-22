@@ -25,7 +25,7 @@ double thickness = 0.2;
 double f = 256;
 double proj_x = 3;
 
-int global_depth = 2;
+int global_depth = 3;
 double epsilone = 0.01;
 
 Vect O(0, 0, 0);
@@ -51,7 +51,11 @@ float kref[] = {0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
 float ktrans[] = {0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
 float glass_refraction_index = 1.6, air_refraction_index = 1.0;
 
-float gaussian_filter[] = {1.0/16, 1.0/8, 1.0/16, 1.0/8, 1.0/4, 1.0/8, 1.0/16, 1.0/8, 1.0/16};
+float gaussian_filter[] = { 0.00390625,  0.015625  ,  0.0234375 ,  0.015625  ,  0.00390625,
+                            0.015625  ,  0.0625    ,  0.09375   ,  0.0625    ,  0.015625  ,
+                            0.0234375 ,  0.09375   ,  0.140625  ,  0.09375   ,  0.0234375 ,
+                            0.015625  ,  0.0625    ,  0.09375   ,  0.0625    ,  0.015625  ,
+                            0.00390625,  0.015625  ,  0.0234375 ,  0.015625  ,  0.00390625};//{1.0/16, 1.0/8, 1.0/16, 1.0/8, 1.0/4, 1.0/8, 1.0/16, 1.0/8, 1.0/16};
 
 // plane normals -- normalized
 Vect pn[] = { Vect(0,1,0), Vect(1,0,0), Vect(0,0,1) };
@@ -63,8 +67,7 @@ Vect sc[] = { Vect(3.0, s_r[0] + 0.01, 1.5), Vect(2.5, s_r[1] + 0.01, 2.5), Vect
 
 // Lights
 Vect light1_pos = Vect(3.5, s_r[1] + 3, 1.5); //Vect(3.5, s_r[1] + 3, 1.5)
-Vect light2_pos = Vect(0.5, 0.5, 1.5); //Vect(0.5, 0.5, 1.5);
-
+Vect light2_pos = Vect(0.5, 0.5, 1.5); //Vect(3.5, s_r[1] + 3, 1.5)
 double max(double x, double y)
 {
 	return x >= y ? x : y;
@@ -117,25 +120,39 @@ int main()
             arr[i][j][0] = 0;
             arr[i][j][1] = 0;
             arr[i][j][2] = 0;
+
+//            double x = i + 0 * 0.45;
+//            double y = j + 0 * 0.45;
+
+//            double iamnt = (x + 0.5) / width;
+//            double jamnt = ((height - y) + 0.5) / height;
+//            Vect ray_direction = (cam_dir + cam_right*(jamnt - 0.5) +
+//                cam_down*(iamnt - 0.5)).normalize();
+
+//            three_doubles color = compute_shade(eye_pos, ray_direction, 0);
+//            arr[i][j][0] += (int)(color.r);// * gaussian_filter[index]);
+//            arr[i][j][1] += (int)(color.g);// * gaussian_filter[index]);
+//            arr[i][j][2] += (int)(color.b);// * gaussian_filter[index]);
+
             int index = 0;
-            for(int horizontal = -1; horizontal <= 1; horizontal++)
-                for(int vertical = -1; vertical <= 1; vertical++)
-			    {
-			        double x = i + horizontal * 0.45;
-			        double y = j + vertical * 0.45;
+            for(int horizontal = -2; horizontal <= 2; horizontal++)
+                for(int vertical = -2; vertical <= 2; vertical++)
+                {
+                    double x = i + float((rand()%1000 - 500)/1000.0);
+                    double y = j + float((rand()%1000 - 500)/1000.0);
 			        
-			        double iamnt = (x + 0.5) / width;
-			        double jamnt = ((height - y) + 0.5) / height;
-			        Vect ray_direction = (cam_dir + cam_right*(jamnt - 0.5) +
-				        cam_down*(iamnt - 0.5)).normalize();
+                    double iamnt = (x + 0.5) / width;
+                    double jamnt = ((height - y) + 0.5) / height;
+                    Vect ray_direction = (cam_dir + cam_right*(jamnt - 0.5) +
+                        cam_down*(iamnt - 0.5)).normalize();
 				
-			        three_doubles color = compute_shade(eye_pos, ray_direction, 0);
-			        arr[i][j][0] += (int)(color.r * gaussian_filter[index]);
-			        arr[i][j][1] += (int)(color.g * gaussian_filter[index]);
-			        arr[i][j][2] += (int)(color.b * gaussian_filter[index]);
+                    three_doubles color = compute_shade(eye_pos, ray_direction, 0);
+                    arr[i][j][0] += (int)(color.r * gaussian_filter[index]);
+                    arr[i][j][1] += (int)(color.g * gaussian_filter[index]);
+                    arr[i][j][2] += (int)(color.b * gaussian_filter[index]);
 			        
-			        index++;
-			    }
+                    index++;
+                }
 		}
 	writePPM("test.ppm", width, height, arr);
 	return 0;
@@ -218,9 +235,9 @@ three_doubles compute_shade(Vect start_p, Vect ray_direction, int depth)
 			&& abs(cos(freq / f * intersect_2 * 2 * M_PI)) > thickness);
 	else {
 		// spheres
-        color.r = (min_ind == 3) ? 255: 0;
-        color.g = (min_ind == 3) ? 255: 0; //* (min_ind == 4);
-        color.b =  255 * (min_ind == 3);
+        color.r = 255;
+        color.g = 255; //* (min_ind == 4);
+        color.b =  255;
 		//color.r = color.g = color.b = 255;
 	}
 
