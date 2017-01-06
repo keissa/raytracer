@@ -433,6 +433,7 @@ bool intersect_sphere_from_inside(Vect pos, Vect ray_direction, Vect center, dou
 	double A = ray_direction.squaredMagnitude();
 	double D = B*B - 4 * A * C;
 	double t, t_1, t_2;
+	//cout<<D<<endl;
 	if (D < 0) {
 		// No intersection
 		t = 1e7;
